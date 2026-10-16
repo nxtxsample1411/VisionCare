@@ -4,6 +4,9 @@ VisionCare - Enhanced Modern CSS
 */
 
 /* --- Custom Properties for Dynamic Theming --- */
+html, body {
+    height: 100%;
+}
 :root {
     --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -57,8 +60,8 @@ body::before {
     width: 100%;
     height: 100%;
     background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
     animation: backgroundFloat 20s ease-in-out infinite;
     z-index: -2;
 }
@@ -83,9 +86,19 @@ body.page-exit {
 
 /* --- Dynamic Animations --- */
 @keyframes backgroundFloat {
-    0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
-    33% { transform: translate(30px, -30px) rotate(120deg); }
-    66% { transform: translate(-20px, 20px) rotate(240deg); }
+
+    0%,
+    100% {
+        transform: translate(0px, 0px) rotate(0deg);
+    }
+
+    33% {
+        transform: translate(30px, -30px) rotate(120deg);
+    }
+
+    66% {
+        transform: translate(-20px, 20px) rotate(240deg);
+    }
 }
 
 @keyframes fadeInUp {
@@ -94,6 +107,7 @@ body.page-exit {
         transform: translateY(40px) scale(0.95);
         filter: blur(5px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -102,34 +116,75 @@ body.page-exit {
 }
 
 @keyframes glowPulse {
-    0%, 100% { box-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-blue), 0 0 60px var(--neon-blue); }
-    50% { box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-blue), 0 0 60px var(--neon-blue);
+    }
+
+    50% {
+        box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue);
+    }
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
 }
 
 @keyframes slideInLeft {
-    from { transform: translateX(-100px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(-100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideInRight {
-    from { transform: translateX(100px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes spin3D {
-    from { transform: rotateY(0deg); }
-    to { transform: rotateY(360deg); }
+    from {
+        transform: rotateY(0deg);
+    }
+
+    to {
+        transform: rotateY(360deg);
+    }
 }
 
 @keyframes morphGradient {
-    0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-    50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
-    100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    0% {
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
+
+    50% {
+        border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    }
+
+    100% {
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
 }
 
 /* --- Enhanced Component Classes --- */
@@ -290,7 +345,8 @@ header:hover {
 }
 
 /* --- Enhanced Form Elements --- */
-input, textarea {
+input,
+textarea {
     background: var(--glass-bg);
     backdrop-filter: blur(10px);
     border: 2px solid var(--glass-border);
@@ -302,18 +358,24 @@ input, textarea {
     outline: none;
 }
 
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
     border-color: var(--neon-blue);
     box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
     transform: scale(1.02);
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
     color: rgba(255, 255, 255, 0.6);
 }
 
 /* --- Typography Enhancements --- */
-h1, h2, h3, h4, h5 {
+h1,
+h2,
+h3,
+h4,
+h5 {
     background: var(--gradient-accent);
     background-clip: text;
     -webkit-background-clip: text;
@@ -323,9 +385,17 @@ h1, h2, h3, h4, h5 {
     margin-bottom: 1rem;
 }
 
-h1 { font-size: 3rem; }
-h2 { font-size: 2.5rem; }
-h3 { font-size: 2rem; }
+h1 {
+    font-size: 3rem;
+}
+
+h2 {
+    font-size: 2.5rem;
+}
+
+h3 {
+    font-size: 2rem;
+}
 
 /* --- Enhanced Status Indicators --- */
 .status-indicator {
@@ -352,8 +422,13 @@ h3 { font-size: 2rem; }
 }
 
 @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
 }
 
 .bg-amber-100 {
@@ -377,18 +452,25 @@ h3 { font-size: 2rem; }
     border-color: rgba(255, 255, 255, 0.1);
 }
 
-.dark .bg-white, .dark .bg-slate-100 {
+.dark .bg-white,
+.dark .bg-slate-100 {
     background: rgba(0, 0, 0, 0.3);
     border-color: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.9);
 }
 
-.dark h1, .dark h2, .dark h3, .dark h4, .dark h5 {
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5 {
     color: #ffffff;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.dark p, .dark span, .dark div {
+.dark p,
+.dark span,
+.dark div {
     color: rgba(255, 255, 255, 0.85);
 }
 
@@ -411,8 +493,13 @@ h3 { font-size: 2rem; }
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* --- Page-Specific Layouts with Style --- */
@@ -421,8 +508,12 @@ h3 { font-size: 2rem; }
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 150px);
+    min-height: 100vh;
+    width: 100%;
     position: relative;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
 }
 
 .history-page-main {
@@ -434,7 +525,9 @@ h3 { font-size: 2rem; }
 }
 
 #test-content {
-    min-height: 520px;
+     width: 100%;
+    flex: 1;
+    align-items: center;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -454,13 +547,15 @@ h3 { font-size: 2rem; }
 }
 
 /* --- List Enhancements --- */
-#gemini-tips-output ul, #symptom-checker-output ul {
+#gemini-tips-output ul,
+#symptom-checker-output ul {
     list-style: none;
     padding: 0;
     margin-top: 1.5rem;
 }
 
-#gemini-tips-output li, #symptom-checker-output li {
+#gemini-tips-output li,
+#symptom-checker-output li {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: 15px;
@@ -471,12 +566,14 @@ h3 { font-size: 2rem; }
     backdrop-filter: blur(10px);
 }
 
-#gemini-tips-output li:hover, #symptom-checker-output li:hover {
+#gemini-tips-output li:hover,
+#symptom-checker-output li:hover {
     transform: translateX(10px);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
 }
 
-#gemini-tips-output li::before, #symptom-checker-output li::before {
+#gemini-tips-output li::before,
+#symptom-checker-output li::before {
     content: '✨';
     position: absolute;
     left: -10px;
@@ -487,7 +584,8 @@ h3 { font-size: 2rem; }
     transition: all 0.3s ease;
 }
 
-#gemini-tips-output li:hover::before, #symptom-checker-output li:hover::before {
+#gemini-tips-output li:hover::before,
+#symptom-checker-output li:hover::before {
     opacity: 1;
     left: -5px;
 }
@@ -499,19 +597,33 @@ h3 { font-size: 2rem; }
         padding: 1rem;
         border-radius: 15px;
     }
-    
-    h1 { font-size: 2rem; }
-    h2 { font-size: 1.8rem; }
-    h3 { font-size: 1.5rem; }
-    
-    .bg-white:hover {
-        transform: translateY(-4px) scale(1.01);
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.8rem;
+    }
+
+    h3 {
+        font-size: 1.5rem;
+    }
+
+    .test-page-main .bg-white {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 }
 
 /* --- Accessibility Enhancements --- */
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+
+    *,
+    *::before,
+    *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
@@ -526,3 +638,67 @@ h3 { font-size: 2rem; }
         --neon-pink: #ff00ff;
     }
 }
+
+
+#acuity-letters {
+    font-size: 80px;
+    letter-spacing: 20px;
+    text-align: center;
+}
+
+/* --- Clinical Test Mode Surgical Takeover --- */
+.clinical-test-mode, .clinical-test-mode body {
+    background: #ffffff !important;
+    overflow: hidden !important;
+}
+
+.clinical-test-mode header,
+.clinical-test-mode footer,
+.clinical-test-mode .mb-8:not(#acuity-test-step .mb-8) {
+    display: none !important;
+}
+
+.clinical-test-mode #acuity-test-step {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #ffffff !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.clinical-test-mode #acuity-test-step h3,
+.clinical-test-mode #acuity-test-step p {
+    color: #000000 !important;
+    background: transparent !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+}
+
+.clinical-test-mode .optotype {
+    color: #000000 !important;
+}
+
+.quit-test-btn {
+    margin-top: 50px;
+    padding: 12px 24px;
+    background: #f5576c;
+    color: white !important;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.quit-test-btn:hover {
+    background: #d44759;
+    transform: scale(1.05);
+}

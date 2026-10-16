@@ -1,0 +1,24 @@
+PATH FIX - VisionCare Backend
+==============================
+
+PROBLEM:
+You are in: C:\Users\Riya wankhede\Downloads\VisionCare_main
+But app.py is in: C:\Users\Riya wankhede\Downloads\VisionCare_main\VisionCare_main
+
+SOLUTION - Choose ONE:
+
+Option 1: Use the startup script (EASIEST)
+------------------------------------------
+Double-click: start_backend.bat
+(This automatically goes to the correct folder)
+
+Option 2: Navigate to correct folder first
+-------------------------------------------
+cd VisionCare_main
+python app.py
+
+Option 3: Run from parent folder
+---------------------------------
+python VisionCare_main\app.py
+
+RECOMMENDED: Use Option 1 (start_backend.bat)

@@ -1,0 +1,24 @@
+VisionCare Installation Guide for Python 3.12
+==============================================
+
+STEP 1: Upgrade pip, setuptools, and wheel
+-------------------------------------------
+python -m pip install --upgrade pip setuptools wheel
+
+STEP 2: Install dependencies
+-----------------------------
+pip install -r requirements.txt
+
+STEP 3: Run the backend
+-----------------------
+python app.py
+
+STEP 4: Test the prediction
+---------------------------
+python test_prediction.py
+
+Backend will run at: http://localhost:5000
+
+Troubleshooting:
+- If numpy fails: pip install numpy==1.26.4 --only-binary :all:
+- If tensorflow fails: pip install tensorflow==2.16.1 --only-binary :all:

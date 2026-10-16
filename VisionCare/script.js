@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = "Connecting to Python...";
 
         try {
-            const socket = new WebSocket("ws://localhost:8765");
+            const socket = new WebSocket("ws://localhost:8080");
 
             socket.onopen = () => {
                 const screenSize = prompt("Enter screen diagonal in inches:", "15.6") || "15.6";
@@ -489,3 +489,96 @@ function logout() {
     localStorage.clear();
     window.location.href = "auth.html";
 }
+
+// ---------------- SYMPTOM CHECKER & REPORT ANALYZER ----------------
+document.addEventListener("DOMContentLoaded", () => {
+    const symptomBtn = document.getElementById("symptom-submit-btn");
+    const outputEl = document.getElementById("symptom-checker-output");
+    const loadingEl = document.getElementById("symptom-loading");
+
+    if (symptomBtn) {
+        symptomBtn.addEventListener("click", () => {
+            const input = document.getElementById("symptom-input").value.trim();
+            if (!input) {
+                alert("Please describe your symptoms first.");
+                return;
+            }
+            const prompt = `
+                Analyze the following symptoms and provide general informational insights. 
+                Remind the user that this is not a medical diagnosis and to consult a professional for serious concerns.
+                Symptoms: ${input}
+            `;
+            loadingEl.querySelector("p").innerText = "Analyzing symptoms...";
+            callGroqApi(outputEl, loadingEl, prompt);
+        });
+    }
+
+    // ---------------- REPORT ANALYZER ----------------
+    const analyzeReportBtn = document.getElementById("analyze-report-btn");
+    if (analyzeReportBtn) {
+        analyzeReportBtn.addEventListener("click", async () => {
+            const fileInput = document.getElementById("report-upload");
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select a file to upload (.pdf, .docx, .jpg, .png).");
+                return;
+            }
+
+            outputEl.style.display = "none";
+            loadingEl.style.display = "block";
+            loadingEl.querySelector("p").innerText = "Reading and analyzing medical report. This may take a moment...";
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await fetch("http://127.0.0.1:8000/analyze-file/", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.detail || "Error analyzing file");
+                }
+
+                const result = await res.json();
+                const text = result.analysis;
+
+                if (!text) {
+                    outputEl.textContent = "No analysis available.";
+                    return;
+                }
+
+                // Apply simple markdown conversion (similar to callGroqApi)
+                let html = text
+                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                    .replace(/^[\s]*\* (.*?)$/gm, "<li>$1</li>");
+
+                const lines = html.split("\n");
+                let processed = "";
+                let inList = false;
+
+                for (let line of lines) {
+                    if (line.startsWith("<li>")) {
+                        if (!inList) { processed += "<ul>"; inList = true; }
+                        processed += line;
+                    } else {
+                        if (inList) { processed += "</ul>"; inList = false; }
+                        if (line.trim() !== "") processed += `<p class="mb-2">${line}</p>`;
+                    }
+                }
+                if (inList) processed += "</ul>";
+
+                outputEl.innerHTML = `<h4 class="text-lg font-bold mb-2">Analysis for: <span class="text-blue-600">${result.filename}</span></h4><div class="mt-4">${processed}</div>`;
+
+            } catch (err) {
+                console.error(err);
+                outputEl.textContent = "Error: " + err.message;
+            } finally {
+                loadingEl.style.display = "none";
+                outputEl.style.display = "block";
+            }
+        });
+    }
+});

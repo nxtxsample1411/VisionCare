@@ -1,0 +1,43 @@
+VisionCare - Quick Start Guide
+================================
+
+STEP 1: Install Dependencies
+-----------------------------
+Double-click: install.bat
+OR run: pip install -r requirements.txt
+
+STEP 2: Start Backend
+----------------------
+Double-click: run.bat
+OR run: python app.py
+
+Backend will start at: http://localhost:5000
+
+STEP 3: Test the Integration
+-----------------------------
+Option A: Open test_frontend.html in your browser
+Option B: Use your existing VisionCare frontend
+
+STEP 4: Upload an Eye Image
+----------------------------
+- Select an eye image
+- Click "Analyze Image"
+- Get disease prediction with confidence score
+
+API Response Format:
+{
+  "disease": "normal_eyes",
+  "confidence": 0.95
+}
+
+Possible Diseases:
+- bulging_eyes
+- cataracts
+- crossed_eyes
+- normal_eyes
+- uveitis
+
+Troubleshooting:
+- If backend fails to start: Check if port 5000 is available
+- If CORS error: Backend already has CORS enabled
+- If model not found: Ensure eye_disease_model.h5 is in VisionCare-Backend folder

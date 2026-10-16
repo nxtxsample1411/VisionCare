@@ -100,6 +100,7 @@
                 <a href="learn.html" class="nav-link text-slate-600 hover:text-blue-600 transition-colors dark:text-slate-400 dark:hover:text-blue-500">Learn</a>
                 <a href="symptom-checker.html" class="nav-link text-slate-600 hover:text-blue-600 transition-colors dark:text-slate-400 dark:hover:text-blue-500">Symptom Checker</a>
                 <a href="history.html" class="nav-link text-slate-600 hover:text-blue-600 transition-colors dark:text-slate-400 dark:hover:text-blue-500">Test History</a>
+                 <a href="test_frontend.html" class="nav-link text-slate-600 hover:text-blue-600 transition-colors dark:text-slate-400 dark:hover:text-blue-500">Test Eyes</a>
                 
             </nav>
         </header>
@@ -127,28 +128,43 @@
                             </div>
                             <p id="calibration-message" class="mt-4 text-lg font-medium text-blue-600 h-6">Waiting for user input...</p>
                             <button id="start-calibration-btn" class="mt-4 bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-all">Start Calibration</button>
+                            <div class="mt-6 flex items-center justify-center">
+                                <input type="checkbox" id="skip-calib-cb" class="mr-2 cursor-pointer w-4 h-4">
+                                <label for="skip-calib-cb" class="text-sm text-slate-500 cursor-pointer">Skip Calibration (Testing Only)</label>
+                            </div>
                         </div>
                         
                         <div id="acuity-test-step" class="hidden">
-                            <h3 class="text-2xl font-bold">Visual Acuity Test</h3>
-                            <p class="mt-2 text-slate-400">
-                                Cover your <span id="eye-to-cover" class="font-bold text-blue-600">left</span> eye. Read the 3 letters you see below.
-                            </p>
+                            <div id="test-header" class="text-center">
+                                <h3 class="text-2xl font-bold">Visual Acuity Test</h3>
+                                <p class="mt-2 text-slate-400">
+                                    Cover your <span id="eye-to-cover" class="font-bold text-blue-600">left</span> eye. Read the 3 letters you see below.
+                                </p>
+                            </div>
         
                             <div id="letter-display-container" class="my-8 text-center min-h-[150px] flex items-center justify-center">
                                 <p id="acuity-loading-text" class="text-xl text-slate-500">Generating test...</p>
                             </div>
         
-                            <div class="mt-6 max-w-sm mx-auto">
+                            <div id="input-section" class="mt-6 max-w-sm mx-auto">
                                 <label for="user-input" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    Enter the 3 letters (e.g., TRZ):
+                                    Enter the 3 letters (e.g., TRZ) or use voice:
                                 </label>
-                                <input type="text" id="user-input" maxlength="3" 
-                                    class="w-full text-center text-2xl uppercase tracking-widest 
-                                    border-2 border-slate-300 dark:border-slate-600 
-                                    rounded-lg p-3 focus:ring-blue-500 focus:border-blue-500 
-                                    transition-colors dark:bg-slate-700 dark:text-white" 
-                                    placeholder="___" autofocus>
+                                <div class="relative">
+                                    <input type="text" id="user-input" maxlength="3" 
+                                        class="w-full text-center text-2xl uppercase tracking-widest 
+                                        border-2 border-slate-300 dark:border-slate-600 
+                                        rounded-lg p-3 pr-12 focus:ring-blue-500 focus:border-blue-500 
+                                        transition-colors dark:bg-slate-700 dark:text-white" 
+                                        placeholder="___" autofocus>
+                                    <button id="mic-btn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-blue-500 focus:outline-none transition-colors" title="Use Speech to Text">
+                                        <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <p id="speech-feedback" class="mt-2 text-sm text-blue-500 hidden"></p>
                                 
                                 <button id="submit-letters-btn" 
                                     class="mt-4 w-full bg-blue-600 text-white font-semibold py-3 rounded-lg 
@@ -221,18 +237,54 @@
             // --- GLOBAL CONFIGURATION AND STATE ---
             const VA_LEVELS = [200, 100, 80, 63, 50, 40, 32, 25, 20, 16, 12]; 
             const SNELLEN_LETTERS = ['A', 'C', 'D', 'E', 'F', 'H', 'K', 'N', 'P', 'R', 'T', 'V', 'Z'];
-            const LETTERS_PER_BLOCK = 3; 
-            const CORRECT_TO_ADVANCE = 2; 
+            const LETTERS_PER_BLOCK = 5; 
+            const CORRECT_TO_ADVANCE = 3; 
             const IDEAL_PIXEL_PER_CM = 37.795; 
 
             let adaptiveState = {
                 eye: 'right', 
-                currentVAIndex: 6, 
+                currentVAIndex: 0, 
                 turnarounds: 0,
-                bestVAIndex: 6, 
+                bestVAIndex: 0, 
+                passedAny: false,
+                lastDirection: null,
+                consecutiveWrong: 0,
+                consecutiveFailedLines: 0,
+                linesAttempted: 0,
+                totalResponses: 0,
                 targetLetters: [],
                 viewingDistanceMM: 400, 
-                results: { od: null, os: null }
+                results: { od: null, os: null },
+
+                // --- ENHANCED: User Context ---
+                user: {
+                    wearingGlasses: false,
+                    currentGlassesPower: 0 // Diopters if wearing glasses
+                },
+
+                // --- ENHANCED: Response History (per eye) ---
+                responseHistory: {
+                    od: [], // { vaIndex, correctCount, timestamp }
+                    os: []
+                },
+
+                // --- ENHANCED: Refractive Estimation ---
+                refractive: {
+                    od: { snellenDiopter: 0, refinedDiopter: 0, finalDiopter: 0, condition: '', severity: '', confidence: 0, failed: false, lowConfidence: false },
+                    os: { snellenDiopter: 0, refinedDiopter: 0, finalDiopter: 0, condition: '', severity: '', confidence: 0, failed: false, lowConfidence: false }
+                },
+
+                // --- ENHANCED: Lens Refinement State ---
+                lensRefinement: {
+                    active: false,
+                    currentEye: 'od',
+                    lensPower: 0,
+                    step: 0.5,
+                    iteration: 0,
+                    maxIterations: 6,
+                    minStep: 0.125,
+                    history: [] // track each refinement choice
+                }
             };
 
             // --- DOM ELEMENTS ---
@@ -256,7 +308,81 @@
                 riskPercentage: document.getElementById('risk-percentage'),
                 riskBar: document.getElementById('risk-bar'),
                 riskDescription: document.getElementById('risk-description'),
+                // Speech elements
+                micBtn: document.getElementById('mic-btn'),
+                micIcon: document.getElementById('mic-icon'),
+                speechFeedback: document.getElementById('speech-feedback'),
             };
+
+            // --- SPEECH RECOGNITION SETUP ---
+            let recognition = null;
+
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = () => {
+                    if (elements.micIcon) {
+                        elements.micIcon.classList.add('text-blue-600', 'animate-pulse');
+                        elements.micIcon.classList.remove('text-slate-400');
+                    }
+                    if (elements.speechFeedback) {
+                        elements.speechFeedback.classList.remove('hidden');
+                        elements.speechFeedback.textContent = "Listening for 5 letters...";
+                    }
+                };
+
+                recognition.onresult = (event) => {
+                    const result = event.results[0][0].transcript.toUpperCase();
+                    console.log("Speech recognized:", result);
+                    
+                    const cleanResult = result.replace(/[^A-Z]/g, '');
+                    elements.userInput.value = cleanResult.substring(0, 5);
+                    elements.userInput.dispatchEvent(new Event('input'));
+                    
+                    if (elements.speechFeedback) {
+                        elements.speechFeedback.textContent = `Heard: "${result}"`;
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech recognition error", event.error);
+                    if (elements.speechFeedback) {
+                        elements.speechFeedback.textContent = `Mic error: ${event.error}. Try typing.`;
+                    }
+                    if (elements.micIcon) {
+                        elements.micIcon.classList.remove('text-blue-600', 'animate-pulse');
+                        elements.micIcon.classList.add('text-slate-400');
+                    }
+                };
+
+                recognition.onend = () => {
+                    if (elements.micIcon) {
+                        elements.micIcon.classList.remove('text-blue-600', 'animate-pulse');
+                        elements.micIcon.classList.add('text-slate-400');
+                    }
+                    if (elements.speechFeedback) {
+                        setTimeout(() => { elements.speechFeedback.classList.add('hidden'); }, 4000);
+                    }
+                };
+
+                if (elements.micBtn) {
+                    elements.micBtn.addEventListener('click', () => {
+                        try {
+                            recognition.start();
+                        } catch(e) {
+                            console.error("Speech Recognition already started");
+                        }
+                    });
+                }
+            } else {
+                if (elements.micBtn) {
+                    elements.micBtn.style.display = 'none';
+                }
+            }
 
             // --- UTILITY FUNCTIONS ---
 
@@ -274,45 +400,324 @@
                 return Math.round(Math.max(10, pixelHeight)); 
             }
 
-            // --- RISK CALCULATION LOGIC (New Feature) ---
-            function calculateEyeHealthProbability(denomRight, denomLeft) {
-                // We base the probability on the WORSE eye (highest denominator)
-                const maxDenom = Math.max(denomRight, denomLeft);
+            // --- SNELLEN TO DIOPTER CONVERSION ENGINE ---
+            // Clinical approximation: LogMAR-based spherical equivalent estimation
+            function snellenToDiopter(snellenDenominator) {
+                // Standard clinical mapping (Controlled Power Mapping)
+                const SNELLEN_DIOPTER_MAP = {
+                    200: -2.00, // 6/60
+                    100: -1.50, // 6/36
+                    80:  -1.00, // 6/24
+                    63:  -0.75, // 6/18
+                    50:  -0.625, 
+                    40:  -0.50, // 6/12
+                    32:  -0.25, // 6/9
+                    25:  -0.125, 
+                    20:   0.00, // 6/6
+                    16:   0.00, 
+                    12:   0.00  
+                };
+
+                if (SNELLEN_DIOPTER_MAP.hasOwnProperty(snellenDenominator)) {
+                    return SNELLEN_DIOPTER_MAP[snellenDenominator];
+                }
+
+                // Fallback: LogMAR interpolation
+                // LogMAR = log10(denominator / 20)
+                // Approximate diopter = -LogMAR * 2.5 (clinical heuristic)
+                const logMAR = Math.log10(snellenDenominator / 20);
+                return -(logMAR * 2.5);
+            }
+
+            // --- REFRACTIVE CLASSIFICATION ENGINE ---
+            function classifyRefractive(diopter) {
+                let condition = 'Normal Vision';
+                let severity = '';
+
+                if (diopter === 0) {
+                    condition = 'Normal Vision';
+                } else if (diopter > 0 && diopter <= 0.5) {
+                    condition = 'Mild Hyperopia';
+                } else if (diopter > 0.5 && diopter <= 1.5) {
+                    condition = 'Moderate Hyperopia';
+                } else if (diopter > 1.5) {
+                    condition = 'High Hyperopia';
+                } else if (diopter < 0 && diopter >= -0.5) {
+                    condition = 'Mild Myopia';
+                } else if (diopter < -0.5 && diopter >= -1.5) {
+                    condition = 'Moderate Myopia';
+                } else if (diopter < -1.5) {
+                    condition = 'High Myopia';
+                }
+
+                return { condition, severity };
+            }
+
+            // --- CONFIDENCE SCORE CALCULATOR ---
+            function calculateConfidence(responseHistory, turnarounds) {
+                if (responseHistory.length === 0) return 50;
+
+                // Factor 1: Consistency (fewer oscillations = higher confidence)
+                const consistencyScore = Math.max(0, 100 - (turnarounds * 15));
+
+                // Factor 2: Response pattern stability
+                let oscillationCount = 0;
+                for (let i = 2; i < responseHistory.length; i++) {
+                    const prev2 = responseHistory[i-2].correctCount;
+                    const prev1 = responseHistory[i-1].correctCount;
+                    const curr = responseHistory[i].correctCount;
+                    if ((prev1 > prev2 && curr < prev1) || (prev1 < prev2 && curr > prev1)) {
+                        oscillationCount++;
+                    }
+                }
+                const stabilityScore = Math.max(0, 100 - (oscillationCount * 20));
+
+                // Factor 3: Number of data points (more = more reliable)
+                const dataScore = Math.min(100, responseHistory.length * 15);
+
+                // Weighted average
+                let confidence = Math.round(
+                    (consistencyScore * 0.4) + 
+                    (stabilityScore * 0.35) + 
+                    (dataScore * 0.25)
+                );
+
+                // If responses < 15 -> reduce confidence. If consistent -> increase.
+                const totalResponsesAssessed = responseHistory.length * 5; 
+                if (totalResponsesAssessed < 15) {
+                    confidence -= 15;
+                }
+                if (consistencyScore > 85) {
+                    confidence += 10;
+                }
+
+                // If skipCalibration is true, confidence is naturally slightly lower due to lack of strict distance tracking
+                if (typeof skipCalibration !== 'undefined' && skipCalibration) {
+                    confidence -= 5;
+                }
+
+                return Math.min(95, Math.max(40, confidence)); // Clamp 40-95%
+            }
+
+            // --- LENS REFINEMENT MODULE (Binary Search) ---
+            function startLensRefinement(eyeKey, initialDiopter, callback) {
+                const state = adaptiveState.lensRefinement;
+                state.active = true;
+                state.currentEye = eyeKey;
+                state.lensPower = initialDiopter;
+                state.step = 0.50;
+                state.iteration = 0;
+                state.history = [];
+
+                showPreTestInstruction('lens_' + eyeKey, () => {
+                    runRefinementIteration(callback);
+                });
+            }
+
+            function runRefinementIteration(callback) {
+                const state = adaptiveState.lensRefinement;
+
+                // Stop condition
+                if (state.step < state.minStep || state.iteration >= state.maxIterations) {
+                    state.active = false;
+                    
+                    // Detect oscillation: if last 3 values oscillate, average them
+                    if (state.history.length >= 3) {
+                        const last3 = state.history.slice(-3).map(h => h.power);
+                        const isOscillating = (last3[0] > last3[1] && last3[2] > last3[1]) ||
+                                             (last3[0] < last3[1] && last3[2] < last3[1]);
+                        if (isOscillating) {
+                            state.lensPower = (last3[0] + last3[1] + last3[2]) / 3;
+                        }
+                    }
+
+                    // Clamp to ±10.00 D
+                    state.lensPower = Math.max(-10.0, Math.min(10.0, state.lensPower));
+                    state.lensPower = Math.round(state.lensPower * 4) / 4; // Round to nearest 0.25
+
+                    callback(state.lensPower);
+                    return;
+                }
+
+                // Generate two comparison options with CSS blur
+                const optionA_power = state.lensPower + state.step;
+                const optionB_power = state.lensPower - state.step;
+
+                // Calculate blur amounts (higher |diopter| = more blur)
+                const blurA = Math.abs(optionA_power) * 0.8; // px blur per diopter
+                const blurB = Math.abs(optionB_power) * 0.8;
+
+                // Show comparison in the letter display container
+                const testLetters = [];
+                for (let i = 0; i < 5; i++) {
+                    testLetters.push(SNELLEN_LETTERS[Math.floor(Math.random() * SNELLEN_LETTERS.length)]);
+                }
+                const letterStr = testLetters.join(' ');
+
+                const html = `
+                    <div style="text-align:center;">
+                        <p style="color:#333; font-size:14px; margin-bottom:20px;">Which looks clearer? Click A or B:</p>
+                        <div style="display:flex; gap:40px; justify-content:center; align-items:center;">
+                            <div id="lens-option-a" style="cursor:pointer; padding:20px 30px; border:2px solid #ddd; border-radius:12px; transition:all 0.2s;" 
+                                 onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#ddd'">
+                                 <p style="font-size:14px; color:#666; margin-bottom:8px;">Option A</p>
+                                 <span style="font-size:48px; font-weight:800; color:#000; filter:blur(${blurA}px);">${letterStr}</span>
+                            </div>
+                            <div id="lens-option-b" style="cursor:pointer; padding:20px 30px; border:2px solid #ddd; border-radius:12px; transition:all 0.2s;"
+                                 onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#ddd'">
+                                 <p style="font-size:14px; color:#666; margin-bottom:8px;">Option B</p>
+                                 <span style="font-size:48px; font-weight:800; color:#000; filter:blur(${blurB}px);">${letterStr}</span>
+                            </div>
+                        </div>
+                        <p style="font-size:12px; color:#999; margin-top:15px;">Lens Refinement: Iteration ${state.iteration + 1}/${state.maxIterations}</p>
+                    </div>
+                `;
+
+                elements.letterDisplayContainer.innerHTML = html;
+
+                // Hide the text input and submit button during refinement
+                const inputSec = document.getElementById('input-section');
+                if(inputSec) inputSec.style.display = 'none';
+
+                // Attach click handlers
+                document.getElementById('lens-option-a').onclick = () => {
+                    state.lensPower = optionA_power;
+                    state.history.push({ power: optionA_power, choice: 'A' });
+                    state.step /= 2;
+                    state.iteration++;
+                    runRefinementIteration(callback);
+                };
+
+                document.getElementById('lens-option-b').onclick = () => {
+                    state.lensPower = optionB_power;
+                    state.history.push({ power: optionB_power, choice: 'B' });
+                    state.step /= 2;
+                    state.iteration++;
+                    runRefinementIteration(callback);
+                };
+            }
+
+            // --- RISK CALCULATION LOGIC ---
+            function calculateEyeHealthProbability(powerRight, powerLeft, confScore) {
+                const absPR = powerRight === null ? null : Math.abs(powerRight);
+                const absPL = powerLeft === null ? null : Math.abs(powerLeft);
                 
-                let probability = 0;
+                // Risk conditions
+                const bothNull = (absPR === null && absPL === null);
+                const oneNull = (absPR === null || absPL === null);
+                const bothSevere = (absPR !== null && absPR > 3.0) && (absPL !== null && absPL > 3.0);
+                
+                // Identify worse actual power (treating null as 0 for this specific max, then overriding)
+                const validR = absPR || 0;
+                const validL = absPL || 0;
+                const worsePower = Math.max(validR, validL); 
+                
+                let probability = 5;
                 let colorClass = "bg-green-500";
                 let textClass = "text-green-600";
                 let description = "";
 
-                if (maxDenom <= 20) {
-                    probability = 5; // 5% chance (Normal)
-                    description = "Your vision appears normal. Routine checkups are still recommended.";
-                } else if (maxDenom <= 25) {
-                    probability = 25; // Mild
-                    colorClass = "bg-yellow-400";
-                    textClass = "text-yellow-600";
-                    description = "You may have very mild vision loss. Monitoring recommended.";
-                } else if (maxDenom <= 40) {
-                    probability = 55; // Moderate
-                    colorClass = "bg-orange-500";
-                    textClass = "text-orange-600";
-                    description = "Moderate probability of refractive error. You likely need glasses for driving or distance.";
-                } else if (maxDenom <= 70) {
-                    probability = 80; // High
-                    colorClass = "bg-red-500";
-                    textClass = "text-red-600";
-                    description = "High probability of vision issues. An appointment with an optometrist is strongly advised.";
+                if (oneNull) {
+                    probability = 60 + Math.floor(Math.random() * 16); // 60-75%
+                    description = "Consult eye specialist";
+                } else if (worsePower === 0.00) {
+                    probability = Math.floor(Math.random() * 6) + 5; // 5-10%
+                    description = "Vision appears normal";
+                } else if (worsePower <= 0.50) {
+                    // Mild (Myopia/Hyperopia) -> 20-40%
+                    probability = 20 + Math.floor((worsePower / 0.50) * 20); 
+                    description = "Mild vision issue";
+                } else if (worsePower <= 1.50) {
+                    // Moderate (Myopia/Hyperopia) -> 40-60%
+                    probability = 40 + Math.floor(((worsePower - 0.50) / 1.0) * 20); 
+                    description = "Mild vision issue";
+                } else if (worsePower <= 3.00) {
+                    // High -> 60-75%
+                    probability = 60 + Math.floor(((worsePower - 1.50) / 1.5) * 15); 
+                    description = "Consult eye specialist";
                 } else {
-                    probability = 95; // Very High
-                    colorClass = "bg-red-700";
-                    textClass = "text-red-800";
-                    description = "Very high probability of significant vision impairment. Please see a doctor immediately.";
+                    // Very High -> 75-90%
+                    probability = 75 + Math.floor(Math.min(((worsePower - 3.00) / 3.0), 1.0) * 15); 
+                    description = "Consult eye specialist";
+                }
+
+                if (confScore < 60) probability += 10;
+                else if (confScore > 80) probability -= 5;
+                
+                // NEVER exceed 80% unless both eyes severe
+                if (!bothSevere && !bothNull) {
+                    probability = Math.min(80, probability);
+                }
+
+                probability = Math.max(5, Math.min(90, probability)); // Clamp boundaries safely
+                
+                // Tie thematic styling purely to absolute condition boundaries, avoiding probability contradictions
+                if (oneNull) {
+                    description = "Consult eye specialist";
+                    colorClass = "bg-red-600";
+                    textClass = "text-red-700";
+                } else if (worsePower === 0) {
+                    description = "Vision appears normal";
+                    colorClass = "bg-green-500";
+                    textClass = "text-green-600";
+                } else if (worsePower <= 1.50) {
+                    description = "Mild vision issue";
+                    colorClass = "bg-yellow-500";
+                    textClass = "text-yellow-600";
+                } else {
+                    description = "Consult eye specialist";
+                    colorClass = "bg-red-600";
+                    textClass = "text-red-700";
                 }
 
                 return { probability, colorClass, textClass, description };
             }
 
             // --- ADAPTIVE ACUITY LOGIC ---
+
+            function showPreTestInstruction(phase, callback) {
+                const inputSec = document.getElementById('input-section');
+                if (inputSec) inputSec.style.display = 'none';
+                elements.acuityFeedback.textContent = '';
+                elements.currentVALevel.style.display = 'none';
+                
+                let title = "";
+                let desc = "";
+                
+                if (phase === 'right') {
+                    title = "Right Eye Test";
+                    desc = "Please cover your <strong>LEFT</strong> eye.<br><br>Type the 5 letters you see on the screen.";
+                } else if (phase === 'left') {
+                    title = "Left Eye Test";
+                    desc = "Please cover your <strong>RIGHT</strong> eye.<br><br>Type the 5 letters you see on the screen.";
+                } else if (phase === 'lens_od') {
+                    title = "Lens Refinement (Right Eye)";
+                    desc = "Keep your <strong>LEFT</strong> eye covered.<br><br>Choose the option that looks clearer.";
+                } else if (phase === 'lens_os') {
+                    title = "Lens Refinement (Left Eye)";
+                    desc = "Keep your <strong>RIGHT</strong> eye covered.<br><br>Choose the option that looks clearer.";
+                }
+
+                elements.letterDisplayContainer.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 20px;">
+                        <h2 style="font-size: 2.5rem; margin-bottom: 20px; color: #000; font-weight: bold;">${title}</h2>
+                        <p style="font-size: 1.5rem; color: #333; text-align: center; max-width: 600px; margin-bottom: 40px; line-height: 1.5;">${desc}</p>
+                        <button id="ready-btn" style="padding: 15px 40px; font-size: 1.5rem; background: #2563eb; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">I am Ready</button>
+                    </div>
+                `;
+                
+                document.getElementById('ready-btn').onclick = () => {
+                    elements.letterDisplayContainer.innerHTML = '<p class="text-xl text-slate-500">Loading...</p>';
+                    if (phase === 'right' || phase === 'left') {
+                        if (inputSec) inputSec.style.display = '';
+                        elements.currentVALevel.style.display = '';
+                        callback();
+                    } else {
+                        // For lens refinement, inputSec remains hidden.
+                        callback();
+                    }
+                };
+            }
 
             function generateTestBlock() {
                 const vaDenom = VA_LEVELS[adaptiveState.currentVAIndex];
@@ -333,7 +738,7 @@
                     html += `
                         <div style="display: inline-flex; align-items: center; margin: 0 8px; transform: translateY(${jitterY}px);">
                             <span class="crowding-flanker text-slate-400 font-bold" style="font-size: ${letterSizePx / 3}px;">${FLANKER}</span>
-                            <span class="optotype font-sans font-extrabold text-slate-900 dark:text-white leading-none inline-block align-middle" 
+                            <span class="optotype font-sans font-extrabold text-slate-900 leading-none inline-block align-middle" 
                                 style="font-size: ${letterSizePx}px; height: ${letterSizePx}px; line-height: ${letterSizePx}px; margin: 0 5px;">
                                 ${letter}
                             </span>
@@ -355,7 +760,7 @@
                 const target = adaptiveState.targetLetters.join('');
 
                 if (userInput.length !== LETTERS_PER_BLOCK) {
-                    elements.acuityFeedback.textContent = 'Please enter all 3 letters.';
+                    elements.acuityFeedback.textContent = `Please enter all ${LETTERS_PER_BLOCK} letters.`;
                     return;
                 }
 
@@ -367,31 +772,58 @@
                         correctCount++;
                     }
                 }
+                
+                adaptiveState.linesAttempted++;
+                adaptiveState.totalResponses += LETTERS_PER_BLOCK;
+
+                // --- ENHANCED: Track response history ---
+                const eyeKey = adaptiveState.eye === 'right' ? 'od' : 'os';
+                adaptiveState.responseHistory[eyeKey].push({
+                    vaIndex: adaptiveState.currentVAIndex,
+                    vaDenom: VA_LEVELS[adaptiveState.currentVAIndex],
+                    correctCount: correctCount,
+                    timestamp: Date.now()
+                });
 
                 const passed = correctCount >= CORRECT_TO_ADVANCE; 
                 let oldVAIndex = adaptiveState.currentVAIndex;
                 let newVAIndex = adaptiveState.currentVAIndex;
 
+                let currentDirection = null;
+
+                // "Determine final acuity based on LAST PASSED line (not attempted line)"
+                // bestVAIndex should only track what we actually passed.
                 if (passed) {
-                    newVAIndex = Math.min(VA_LEVELS.length - 1, adaptiveState.currentVAIndex + 1);
-                    adaptiveState.bestVAIndex = oldVAIndex; 
-                    elements.acuityFeedback.textContent = `Correct: ${correctCount}/3. Decreasing size.`;
+                    adaptiveState.passedAny = true;
+                    newVAIndex = Math.min(VA_LEVELS.length - 1, oldVAIndex + 1);
+                    adaptiveState.bestVAIndex = Math.max(adaptiveState.bestVAIndex, oldVAIndex); 
+                    adaptiveState.consecutiveFailedLines = 0;
+                    currentDirection = 'smaller';
+
+                    elements.acuityFeedback.textContent = `Correct: ${correctCount}/${LETTERS_PER_BLOCK}. Decreasing size.`;
                     elements.acuityFeedback.className = "mt-4 text-sm font-medium h-6 text-green-600";
                 } else {
-                    newVAIndex = Math.max(0, adaptiveState.currentVAIndex - 1);
-                    elements.acuityFeedback.textContent = `Correct: ${correctCount}/3. Increasing size.`;
+                    newVAIndex = Math.max(0, oldVAIndex - 1);
+                    adaptiveState.consecutiveFailedLines++;
+                    currentDirection = 'larger';
+
+                    elements.acuityFeedback.textContent = `Failed: ${correctCount}/${LETTERS_PER_BLOCK}. Increasing size.`;
                     elements.acuityFeedback.className = "mt-4 text-sm font-medium h-6 text-red-500";
                 }
 
-                if (oldVAIndex !== newVAIndex) {
-                    if ((oldVAIndex < newVAIndex && !passed) || (oldVAIndex > newVAIndex && passed)) {
-                        adaptiveState.turnarounds++;
-                    }
+                if (adaptiveState.lastDirection !== null && adaptiveState.lastDirection !== currentDirection && oldVAIndex !== newVAIndex) {
+                    adaptiveState.turnarounds++;
                 }
-
+                
+                adaptiveState.lastDirection = currentDirection;
                 adaptiveState.currentVAIndex = newVAIndex;
                 
-                if (adaptiveState.turnarounds >= 3 || newVAIndex === 0 || newVAIndex === VA_LEVELS.length - 1) {
+                const passedBottomLine = (oldVAIndex === VA_LEVELS.length - 1 && passed);
+                // "If user fails first line (6/60): Do NOT assign lens power, Show: Vision too low to estimate"
+                const failedTopLine = (oldVAIndex === 0 && !passed);
+
+                // Stop ONLY after 2 consecutive FAILED lines, or finished bottom/top line completely.
+                if (passedBottomLine || failedTopLine || adaptiveState.consecutiveFailedLines >= 2) {
                     finishEyeTest();
                 } else {
                     setTimeout(generateTestBlock, 1000); 
@@ -399,46 +831,265 @@
             }
 
             function finishEyeTest() {
-                const finalVA = `20/${VA_LEVELS[adaptiveState.bestVAIndex]}`;
-                
-                if (adaptiveState.eye === 'right') {
-                    adaptiveState.results.od = finalVA;
-                    updateProgress(55, 'Step 2 of 2: Visual Acuity (Left Eye)');
-                    startLeftEyeTest();
-                } else {
-                    adaptiveState.results.os = finalVA;
-                    updateProgress(100, 'Test Complete');
-                    showResults();
+                const eyeKey = adaptiveState.eye === 'right' ? 'od' : 'os';
+
+                // Reliability Check
+                const isReliable = adaptiveState.linesAttempted >= 3 && adaptiveState.totalResponses >= 10;
+
+                // FAILURE HANDLING: User cannot read even the largest letters, or test unreliable
+                if (!adaptiveState.passedAny || !isReliable) {
+                    adaptiveState.results[eyeKey] = "Failure";
+                    adaptiveState.refractive[eyeKey].failed = true;
+                    adaptiveState.refractive[eyeKey].unreliable = !isReliable && adaptiveState.passedAny; // Flag to differentiate errors
+                    
+                    const inputSec = document.getElementById('input-section');
+                    if(inputSec) inputSec.style.display = '';
+                    
+                    if (adaptiveState.eye === 'right') {
+                        updateProgress(55, 'Step 2 of 2: Visual Acuity (Left Eye)');
+                        startLeftEyeTest();
+                    } else {
+                        updateProgress(100, 'Test Complete');
+                        showResults();
+                    }
+                    return;
                 }
+
+                const finalVA = `20/${VA_LEVELS[adaptiveState.bestVAIndex]}`;
+                const snellenDenom = VA_LEVELS[adaptiveState.bestVAIndex];
+
+                // Store Snellen result
+                adaptiveState.results[eyeKey] = finalVA;
+
+                // Calculate Snellen-based diopter estimate
+                const snellenDiopter = snellenToDiopter(snellenDenom);
+                adaptiveState.refractive[eyeKey].snellenDiopter = snellenDiopter;
+
+                // Calculate confidence from response history
+                const confidence = calculateConfidence(
+                    adaptiveState.responseHistory[eyeKey], 
+                    adaptiveState.turnarounds
+                );
+                adaptiveState.refractive[eyeKey].confidence = confidence;
+
+                // NO-RESULT CONDITION: Inconsistent responses or low confidence
+                if (confidence < 45) {
+                    adaptiveState.refractive[eyeKey].lowConfidence = true;
+                }
+
+                // Show refinement phase message
+                elements.acuityFeedback.textContent = `Snellen complete for ${eyeKey.toUpperCase()}. Starting lens refinement...`;
+                elements.acuityFeedback.className = "mt-4 text-sm font-medium h-6 text-blue-600";
+
+                // Start lens refinement for this eye
+                startLensRefinement(eyeKey, snellenDiopter, (refinedDiopter) => {
+                    // Store refined result
+                    adaptiveState.refractive[eyeKey].refinedDiopter = refinedDiopter;
+
+                        // Combined final estimate: 60% Snellen + 40% Refinement
+                        let finalDiopter = (snellenDiopter * 0.6) + (refinedDiopter * 0.4);
+
+                        // Glasses-aware adjustment
+                        if (adaptiveState.user.wearingGlasses) {
+                            finalDiopter = adaptiveState.user.currentGlassesPower + finalDiopter;
+                        }
+
+                        // Sign correction: if Snellen shows poor distance → force negative bias
+                        if (snellenDenom > 25 && finalDiopter > 0) {
+                            finalDiopter = -Math.abs(finalDiopter);
+                        }
+
+                        // Clamp to ±10.00 D and round to 0.25 (clamping to realistic range)
+                        finalDiopter = Math.max(-10.0, Math.min(10.0, finalDiopter));
+                        finalDiopter = Math.round(finalDiopter * 4) / 4;
+
+                        adaptiveState.refractive[eyeKey].finalDiopter = finalDiopter;
+
+                        // Classify
+                        const classification = classifyRefractive(finalDiopter);
+                        adaptiveState.refractive[eyeKey].condition = classification.condition;
+                        adaptiveState.refractive[eyeKey].severity = classification.severity;
+
+                        // Re-show the input area
+                        const inputSec = document.getElementById('input-section');
+                        if(inputSec) inputSec.style.display = '';
+
+                        // Continue to next eye or results
+                        if (adaptiveState.eye === 'right') {
+                            updateProgress(55, 'Step 2 of 2: Visual Acuity (Left Eye)');
+                            startLeftEyeTest();
+                        } else {
+                            startContrastTest();
+                        }
+                });
+            }
+
+            function startContrastTest() {
+                const inputSec = document.getElementById('input-section');
+                if (inputSec) inputSec.style.display = 'none';
+                elements.acuityFeedback.textContent = '';
+                elements.currentVALevel.style.display = 'none';
+
+                const html = `
+                    <div style="text-align:center;">
+                        <h2 style="font-size: 2.5rem; margin-bottom: 20px; color: #000; font-weight: bold;">Contrast Sensitivity</h2>
+                        <p style="color:#333; font-size:16px; margin-bottom:20px;">Which is easier to read?</p>
+                        <div style="display:flex; gap:40px; justify-content:center; align-items:center; margin-bottom:30px;">
+                            <div id="contrast-high" style="cursor:pointer; padding:20px 30px; border:2px solid #ddd; border-radius:12px; transition:all 0.2s; background:#fff" 
+                                 onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#ddd'">
+                                <span style="font-size:32px; font-weight:800; color:#000;">VISION</span>
+                            </div>
+                            <div id="contrast-low" style="cursor:pointer; padding:20px 30px; border:2px solid #ddd; border-radius:12px; transition:all 0.2s; background:#fff"
+                                 onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#ddd'">
+                                <span style="font-size:32px; font-weight:800; color:#cbd5e1;">VISION</span>
+                            </div>
+                        </div>
+                        <p style="font-size:12px; color:#999;">Final step before results.</p>
+                    </div>
+                `;
+
+                elements.letterDisplayContainer.innerHTML = html;
+
+                document.getElementById('contrast-high').onclick = () => {
+                    // Normal, no extra adjustment
+                    finalizeResultsAfterContrast();
+                };
+
+                document.getElementById('contrast-low').onclick = () => {
+                    // Good contrast sensitivity, slight improvement to final diopter (closer to 0)
+                    ['od', 'os'].forEach(eye => {
+                        let d = adaptiveState.refractive[eye].finalDiopter;
+                        if (!adaptiveState.refractive[eye].failed) {
+                            if (d < 0) d += 0.25;
+                            else if (d > 0) d -= 0.25;
+                            adaptiveState.refractive[eye].finalDiopter = Math.round(d * 4) / 4;
+                        }
+                    });
+                    finalizeResultsAfterContrast();
+                };
+            }
+
+            function finalizeResultsAfterContrast() {
+                updateProgress(100, 'Test Complete');
+                showResults();
             }
 
             function startLeftEyeTest() {
                 adaptiveState.eye = 'left';
-                adaptiveState.currentVAIndex = 6; 
+                adaptiveState.currentVAIndex = 0; 
                 adaptiveState.turnarounds = 0;
-                adaptiveState.bestVAIndex = 6;
+                adaptiveState.bestVAIndex = 0;
+                adaptiveState.passedAny = false;
+                adaptiveState.lastDirection = null;
+                adaptiveState.consecutiveWrong = 0;
+                adaptiveState.consecutiveFailedLines = 0;
+                adaptiveState.linesAttempted = 0;
+                adaptiveState.totalResponses = 0;
                 
                 elements.eyeToCover.textContent = 'right';
-                elements.acuityFeedback.textContent = 'Starting left eye test. Please cover your right eye now.';
+                elements.acuityFeedback.textContent = '';
                 
-                setTimeout(generateTestBlock, 2000);
+                showPreTestInstruction('left', generateTestBlock);
             }
 
             function showResults() {
+    // Remove clinical mode if active
+    const styleOverride = document.getElementById('clinical-style-override');
+    if (styleOverride) styleOverride.remove();
+    document.body.style = '';
+
     elements.acuityTestStep.classList.add('hidden');
     elements.resultsStep.classList.remove('hidden');
     
     const resOD = adaptiveState.results.od || '20/20';
     const resOS = adaptiveState.results.os || '20/20';
+    const refOD = adaptiveState.refractive.od;
+    const refOS = adaptiveState.refractive.os;
 
-    elements.resultOD.textContent = resOD;
-    elements.resultOS.textContent = resOS;
+    const processEyeResult = (ref, resKey) => {
+        const totalResp = adaptiveState.responseHistory[resKey].length * 5;
+        if (ref.failed) {
+            let msg = ref.unreliable ? "Result not reliable" : "Vision too low to estimate";
+            adaptiveState.results[`${resKey}LensPower`] = null;
+            return `<span style="font-size:16px; color:#ef4444; font-weight:bold;">${msg}</span>`;
+        } else if (ref.confidence < 60 || totalResp < 10) {
+            adaptiveState.results[`${resKey}LensPower`] = null;
+            ref.unreliable = true;
+            ref.failed = true; // Cascade failure to risk engine
+            return `<span style="font-size:16px; color:#ef4444; font-weight:bold;">Result not reliable</span>`;
+        } else {
+            adaptiveState.results[`${resKey}LensPower`] = ref.finalDiopter;
+            return `
+                <span style="font-size:24px; color:#1e40af; font-weight:bold;">${ref.finalDiopter > 0 ? '+' : ''}${ref.finalDiopter.toFixed(2)} D</span><br>
+                <span style="font-size:14px; color:#4b5563;">Condition: ${ref.condition}</span><br>
+                <span style="font-size:14px; color:#4b5563;">Confidence Score: ${ref.confidence}%</span>
+            `;
+        }
+    };
 
-    // Parse denominators
-    const denomOD = parseInt(resOD.split('/')[1]);
-    const denomOS = parseInt(resOS.split('/')[1]);
+    // Output formatting adhering to constraints
+    elements.resultOD.innerHTML = processEyeResult(refOD, 'od');
+    elements.resultOS.innerHTML = processEyeResult(refOS, 'os');
 
-    const healthData = calculateEyeHealthProbability(denomOD, denomOS);
+    let healthData = { probability: 0, textClass: 'text-slate-500', colorClass: 'bg-slate-500', description: 'Pending calculation' };
+
+    const odValid = adaptiveState.results.odLensPower !== null;
+    const osValid = adaptiveState.results.osLensPower !== null;
+
+    let odConf = refOD.confidence || 0;
+    let osConf = refOS.confidence || 0;
+    let finalConfidence = 0;
+
+    if (odValid && osValid) {
+        finalConfidence = (odConf + osConf) / 2;
+    } else if (odValid && !osValid) {
+        finalConfidence = odConf * 0.75;
+    } else if (!odValid && osValid) {
+        finalConfidence = osConf * 0.75;
+    } else {
+        finalConfidence = 0;
+    }
+
+    const totalResponses = (adaptiveState.responseHistory.od.length + adaptiveState.responseHistory.os.length) * 5;
+    if (totalResponses < 8) {
+        finalConfidence *= 0.85;
+    }
+
+    finalConfidence = Math.max(10, Math.min(Math.round(finalConfidence), 95));
+
+    if (!odValid && !osValid) {
+        healthData.probability = 0;
+        healthData.colorClass = "bg-gray-400";
+        healthData.textClass = "text-gray-500";
+        healthData.description = "Test failed. Unable to estimate vision. Please retake test.";
+    } else if (!odValid || !osValid) {
+        const validPower = Math.abs(odValid ? adaptiveState.results.odLensPower : adaptiveState.results.osLensPower);
+        
+        let partialProb = 70;
+        let pColor = "bg-red-500";
+        let pText = "text-red-600";
+        
+        if (validPower <= 0.25) {
+            partialProb = 20;
+            pColor = "bg-green-500";
+            pText = "text-green-600";
+        } else if (validPower <= 0.75) {
+            partialProb = 35;
+            pColor = "bg-yellow-500";
+            pText = "text-yellow-600";
+        } else if (validPower <= 1.5) {
+            partialProb = 55;
+            pColor = "bg-orange-500";
+            pText = "text-orange-600";
+        }
+        
+        healthData.probability = partialProb;
+        healthData.colorClass = pColor;
+        healthData.textClass = pText;
+        healthData.description = `<strong>Partial result available. One eye could not be evaluated.</strong><br>Please retake test for more accurate results.`;
+    } else {
+        healthData = calculateEyeHealthProbability(adaptiveState.results.odLensPower, adaptiveState.results.osLensPower, finalConfidence);
+    }
 
     // UI update for risk
     elements.riskPercentage.textContent = `${healthData.probability}%`;
@@ -449,16 +1100,29 @@
         elements.riskBar.style.width = `${healthData.probability}%`;
     }, 100);
 
-    elements.riskDescription.textContent = healthData.description;
+    elements.riskDescription.innerHTML = `
+        ${healthData.description}<br><br>
+        <strong>Estimation Confidence: ${finalConfidence}%</strong><br>
+        <span style="font-size:12px;">Based on ${adaptiveState.responseHistory.od.length + adaptiveState.responseHistory.os.length} test responses and lens refinement analysis.</span>
+    `;
 
-    // ----- FULL RESULT OBJECT -----
+    // ----- FULL RESULT OBJECT (ENHANCED) -----
     const fullResult = {
         rightEye: resOD,
         leftEye: resOS,
+        rightEyeDiopter: refOD.finalDiopter,
+        leftEyeDiopter: refOS.finalDiopter,
+        rightEyeCondition: `${refOD.severity !== 'None' ? refOD.severity + ' ' : ''}${refOD.condition}`,
+        leftEyeCondition: `${refOS.severity !== 'None' ? refOS.severity + ' ' : ''}${refOS.condition}`,
+        snellenEstimate: { od: refOD.snellenDiopter, os: refOS.snellenDiopter },
+        refinedEstimate: { od: refOD.refinedDiopter, os: refOS.refinedDiopter },
+        confidence: finalConfidence,
+        wearingGlasses: adaptiveState.user.wearingGlasses,
         riskPercentage: healthData.probability,
         riskDescription: healthData.description,
         viewingDistanceMM: adaptiveState.viewingDistanceMM,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        disclaimer: 'This is an AI-based estimation and not a replacement for professional eye examination.'
     };
 
     // ----- AUTO SAVE TO BACKEND -----
@@ -490,19 +1154,130 @@ async function saveHistoryAuto(testName, resultObj) {
         console.error("History save error:", err);
     }
 }
-
-
             function runAcuityTest() {
-                console.log("Starting Acuity Test...");
+                console.log("Starting Surgical Clinical Mode (Internal Override)...");
+
+                // --- ENHANCED: Glasses-Aware Context Detection ---
+                const wearingGlasses = confirm('Are you currently wearing glasses or contact lenses?\n\nClick OK if YES, Cancel if NO.');
+                adaptiveState.user.wearingGlasses = wearingGlasses;
+                if (wearingGlasses) {
+                    const power = prompt('Please enter your current glasses power (e.g., -2.5 or +1.75).\nEnter 0 if unknown:', '0');
+                    adaptiveState.user.currentGlassesPower = parseFloat(power) || 0;
+                }
+                
+                // 1. INJECT CLINICAL STYLES DIRECTLY (BYPASS CACHE)
+                let styleTag = document.getElementById('clinical-style-override');
+                if (!styleTag) {
+                    styleTag = document.createElement('style');
+                    styleTag.id = 'clinical-style-override';
+                    styleTag.innerHTML = `
+                        /* KILL the purple gradient overlays */
+                        body { background: #ffffff !important; overflow: hidden !important; }
+                        body::before, body::after { display: none !important; }
+
+                        /* KILL navbar and progress bar and test header */
+                        header, footer, .mb-8, #test-header { display: none !important; }
+
+                        /* KILL all parent containers - make them invisible */
+                        #app, .test-page-main, #test-screen, #test-screen > div,
+                        .max-w-3xl, .max-w-7xl, #test-content {
+                            background: transparent !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                            backdrop-filter: none !important;
+                            -webkit-backdrop-filter: none !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            max-width: 100% !important;
+                            width: 100% !important;
+                        }
+
+                        /* Fullscreen takeover */
+                        #acuity-test-step {
+                            position: fixed !important; top: 0 !important; left: 0 !important;
+                            width: 100vw !important; height: 100vh !important;
+                            background: #ffffff !important; z-index: 2147483647 !important;
+                            display: flex !important; flex-direction: column !important;
+                            align-items: center !important; justify-content: center !important;
+                            margin: 0 !important; padding: 0 !important;
+                            box-sizing: border-box !important;
+                        }
+                        #letter-display-container {
+                            position: absolute !important;
+                            top: 50% !important;
+                            left: 50% !important;
+                            transform: translate(-50%, -50%) !important;
+                            margin: 0 !important;
+                        }
+                        #input-section {
+                            position: absolute !important;
+                            bottom: 30px !important;
+                            right: 40px !important;
+                            margin: 0 !important;
+                        }
+                        #input-section label {
+                            display: none !important;
+                        }
+                        #acuity-feedback, #current-va-level, #speech-feedback {
+                            position: absolute !important;
+                            bottom: 30px !important;
+                            left: 40px !important;
+                            margin: 0 !important;
+                        }
+                        #acuity-test-step h3, #acuity-test-step p { 
+                            color: #000000 !important; 
+                            background: transparent !important; 
+                            -webkit-text-fill-color: #000000 !important;
+                            -webkit-background-clip: unset !important;
+                            background-clip: unset !important;
+                        }
+                        .optotype { color: #000000 !important; }
+                        
+                        /* Minimalist Quit Button Top Right */
+                        #quit-btn {
+                            position: absolute !important;
+                            top: 20px !important;
+                            right: 30px !important;
+                            margin: 0 !important;
+                            padding: 8px 16px !important;
+                            background: transparent !important;
+                            color: #888 !important;
+                            -webkit-text-fill-color: #888 !important;
+                            border: 1px solid #ccc !important;
+                            border-radius: 6px !important;
+                            cursor: pointer !important;
+                            font-weight: 500 !important;
+                            transition: all 0.3s ease !important;
+                        }
+                        #quit-btn:hover { background: #f5f5f5 !important; color: #000 !important; border-color: #000 !important; }
+                    `;
+                    document.head.appendChild(styleTag);
+                }
+
+                // 2. INJECT QUIT BUTTON IF NOT PRESENT
+                if (!document.getElementById('quit-btn')) {
+                    const quitBtn = document.createElement('button');
+                    quitBtn.id = 'quit-btn';
+                    quitBtn.innerText = 'Quit';
+                    quitBtn.onclick = () => {
+                        const s = document.getElementById('clinical-style-override');
+                        if (s) s.remove();
+                        window.location.href = 'index.html';
+                    };
+                    elements.acuityTestStep.appendChild(quitBtn);
+                }
+
+                // 3. TRIGGER FULLSCREEN
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
                 
                 if (!adaptiveState.viewingDistanceMM) {
-                    console.log("No distance set, defaulting to 400mm");
                     adaptiveState.viewingDistanceMM = 400; 
                 }
 
                 elements.calibrationStep.style.display = 'none'; 
                 elements.acuityTestStep.classList.remove('hidden');
-                elements.acuityTestStep.style.display = 'block';
                 
                 elements.userInput.oninput = () => {
                     elements.submitBtn.disabled = elements.userInput.value.length < LETTERS_PER_BLOCK;
@@ -516,13 +1291,39 @@ async function saveHistoryAuto(testName, resultObj) {
                     }
                 };
 
-                updateProgress(5, 'Step 1 of 2: Visual Acuity (Right Eye)');
-                generateTestBlock(); 
+                updateProgress(100, 'Test Active');
+                showPreTestInstruction('right', generateTestBlock); 
             }
+
+            // 4. RESTORE UI ON ESC
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement) {
+                    const styleTag = document.getElementById('clinical-style-override');
+                    if (styleTag) styleTag.remove();
+                    document.body.style = "";
+                    const testStep = document.getElementById('acuity-test-step');
+                    if (testStep) {
+                        testStep.style = "";
+                        testStep.classList.add('hidden');
+                    }
+                    elements.calibrationStep.style.display = 'block';
+                }
+            });
+
+
 
             // --- CALIBRATION LOGIC (FIXED) ---
 
+            let skipCalibration = false;
+
             const startCalibration = async () => {
+                const skipCb = document.getElementById('skip-calib-cb');
+                if (skipCb && skipCb.checked) {
+                    skipCalibration = true;
+                    runAcuityTest();
+                    return;
+                }
+
                 const calibBtn = elements.startCalibrationBtn;
                 const messageEl = elements.calibrationMessage;
 
@@ -530,7 +1331,7 @@ async function saveHistoryAuto(testName, resultObj) {
                 calibBtn.textContent = 'Connecting...';
                 
                 try {
-                    const socket = new WebSocket('ws://localhost:8765');
+                    const socket = new WebSocket('ws://localhost:8080');
                     
                     socket.onopen = () => {
                         messageEl.textContent = 'Connected! Enter screen size:';
@@ -549,24 +1350,121 @@ async function saveHistoryAuto(testName, resultObj) {
                         }
                     };
 
+                    let targetDistanceCM = 0;
+                    let stabilityCounter = 0;
+                    let isPaused = false;
+
                     socket.onmessage = (event) => {
                         const cleanData = event.data.trim();
-                        const parts = cleanData.split('|');
-                        const status = parts[0].trim();
                         
-                        if (status === 'CALIBRATION_OK') {
+                        // Handle initial calibration lock
+                        if (cleanData.startsWith('CALIBRATION_OK')) {
+                            const parts = cleanData.split('|');
                             const dist = parts.length > 1 ? parseFloat(parts[1]) : 400;
                             adaptiveState.viewingDistanceMM = dist;
+                            targetDistanceCM = dist / 10;
                             
                             messageEl.textContent = `Distance: ${dist}mm. Starting...`;
                             messageEl.className = "mt-4 text-lg font-medium text-green-600 h-6";
                             
-                            socket.close();
+                            // DO NOT close socket anymore!
                             setTimeout(runAcuityTest, 1500);
-                        } else {
+                        } 
+                        // Handle continuous distance updates
+                        else if (cleanData.startsWith('DIST:')) {
+                            const raw = cleanData.split(':')[1];
+                            if (raw === "OUT") {
+                                // User completely out of frame
+                                stabilityCounter = 0;
+                                pauseAcuityTest("OUT"); 
+                            } else {
+                                const currentDist = parseInt(raw);
+                                validateDistance(currentDist);
+                            }
+                        }
+                        else {
                             messageEl.textContent = cleanData;
                         }
                     };
+
+                    function validateDistance(currentDist) {
+                        const diff = Math.abs(currentDist - targetDistanceCM);
+                        const isInRange = diff <= 5; // ±5cm Tolerance
+
+                        if (isInRange) {
+                            stabilityCounter++;
+                            if (stabilityCounter >= 5 && isPaused) { // Stable for ~1 sec (5 * 200ms)
+                                resumeAcuityTest();
+                            }
+                        } else {
+                            stabilityCounter = 0;
+                            if (!isPaused) {
+                                pauseAcuityTest(currentDist);
+                            } else {
+                                updatePauseMessage(currentDist);
+                            }
+                        }
+                    }
+
+                    function pauseAcuityTest(currentDist) {
+                        isPaused = true;
+                        
+                        // Create overlay dynamically (no HTML/CSS changes)
+                        let overlay = document.getElementById('dist-warning-overlay');
+                        if (!overlay) {
+                            overlay = document.createElement('div');
+                            overlay.id = 'dist-warning-overlay';
+                            overlay.style = `
+                                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                                background: rgba(0,0,0,0.85); color: white; z-index: 10000;
+                                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                                text-align: center; backdrop-filter: blur(10px); transition: all 0.3s ease;
+                            `;
+                            overlay.innerHTML = `
+                                <h1 style="color: #ff4b5c; font-size: 2.5rem; margin-bottom: 10px;">⚠️ TEST PAUSED</h1>
+                                <p style="font-size: 1.2rem; margin-bottom: 20px;">You are not at the correct distance.</p>
+                                <div id="dist-info-box" style="padding: 20px; border: 2px solid #555; border-radius: 15px;">
+                                    <p>Target: <span style="font-weight:bold; color:#00d4ff">${targetDistanceCM} cm</span></p>
+                                    <p>Current: <span id="live-dist-val" style="font-weight:bold; font-size: 2rem;">--</span></p>
+                                    <p id="move-dir-hint" style="margin-top:10px; font-weight:bold;"></p>
+                                </div>
+                                <p style="margin-top: 30px; color: #888;">Stay still for 1 second to resume.</p>
+                            `;
+                            document.body.appendChild(overlay);
+                        }
+                        updatePauseMessage(currentDist);
+                    }
+
+                    function updatePauseMessage(dist) {
+                        const valEl = document.getElementById('live-dist-val');
+                        const hintEl = document.getElementById('move-dir-hint');
+                        
+                        if (dist === "OUT") {
+                            if (valEl) valEl.textContent = "USER NOT DETECTED";
+                            if (hintEl) {
+                                hintEl.textContent = "📷 Please face the camera";
+                                hintEl.style.color = "#ffa500";
+                            }
+                            return;
+                        }
+
+                        if (valEl) valEl.textContent = dist + " cm";
+                        if (hintEl) {
+                            if (dist < targetDistanceCM - 5) {
+                                hintEl.textContent = "⬅️ Please move BACKWARDS";
+                                hintEl.style.color = "#ff4b5c";
+                            } else if (dist > targetDistanceCM + 5) {
+                                hintEl.textContent = "➡️ Please move CLOSER";
+                                hintEl.style.color = "#ff4b5c";
+                            }
+                        }
+                    }
+
+                    function resumeAcuityTest() {
+                        isPaused = false;
+                        const overlay = document.getElementById('dist-warning-overlay');
+                        if (overlay) overlay.remove();
+                    }
 
                     socket.onerror = (error) => {
                         console.error("WebSocket Error:", error);
@@ -587,6 +1485,17 @@ async function saveHistoryAuto(testName, resultObj) {
                 window.location.reload(); 
             });
 
+            // Patch input to accept 5 letters and update instructions without changing HTML structure
+            if (elements.userInput) {
+                elements.userInput.maxLength = 5;
+                elements.userInput.placeholder = "_____";
+                
+                const label = document.querySelector('label[for="user-input"]');
+                if (label) label.innerHTML = "Enter the 5 letters (e.g., ABCDE) or use voice:";
+                
+                const testHeaderP = document.querySelector('#test-header p');
+                if (testHeaderP) testHeaderP.innerHTML = testHeaderP.innerHTML.replace('3 letters', '5 letters');
+            }
         });
     </script>
 </body>

@@ -1,0 +1,19 @@
+{
+  "name": "visioncare-all-in-one",
+  "version": "1.0.0",
+  "description": "VisionCare Integrated Startup",
+  "main": "index.html",
+  "scripts": {
+    "install:all": "npm install && cd VisionCare-Backend && npm install && pip install -r ../requirements.txt",
+    "start": "concurrently --kill-others \"npm run start:node\" \"npm run start:flask\" \"npm run start:fastapi\" \"npm run start:ws\" \"npm run start:frontend\"",
+    "start:node": "cd VisionCare-Backend && node server.js",
+    "start:flask": "cd VisionCare-Backend && python app.py",
+    "start:fastapi": "cd VisionCare-Backend && uvicorn main:app --port 8000",
+    "start:ws": "cd VisionCare-Backend && python server.py",
+    "start:frontend": "npx serve VisionCare -p 3000"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2",
+    "serve": "^14.2.1"
+  }
+}

@@ -1,6 +1,26 @@
-node_modules/
+
+# Python virtual environments
+venv/
+.venv/
+VisionCare-Backend/venv/
+VisionCare-Backend/.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables and secrets
 .env
-package-lock.json
+.env.*
+!.env.example
+
+# Node.js dependencies
+node_modules/
+
+# Build output
 dist/
 build/
-".env" 
+
+# IDE files
+.vscode/
+
